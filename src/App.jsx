@@ -134,10 +134,6 @@ function App() {
               </div>
             </div>
           </section>
-
-          <p className="px-1 pb-1 pt-3 text-[11px] text-[#666e78]">
-            UI scaffold only · Components will be developed independently
-          </p>
         </main>
       </div>
     </div>
