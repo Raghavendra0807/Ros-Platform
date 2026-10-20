@@ -39,7 +39,7 @@ function App() {
           </div>
         </aside>
 
-        {/* Main workspace — your responsibility */}
+        
         <main className="min-w-0 flex-1 p-3 sm:p-4">
           {/* Workspace toolbar/header area — Member 2 */}
           <div className="mb-3 flex min-h-[54px] items-center justify-between rounded-lg border border-[#292c30] bg-[#181a1d] px-4 py-3">
