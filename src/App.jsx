@@ -4,9 +4,9 @@ import {
   PanelLeft,
   Folder,
   Code2,
-  Terminal,
   Monitor,
 } from "lucide-react";
+import TerminalPanel from './components/Terminal';
 
 const placeholderClass =
   "flex flex-1 items-center justify-center rounded-lg border border-dashed border-[#34373c] bg-[#131518] text-[#858b95]";
@@ -98,23 +98,7 @@ function App() {
           </div>
 
           {/* Terminal container — Member 4 */}
-          <section className="mt-3 flex min-h-[190px] flex-col overflow-hidden rounded-lg border border-[#292c30] bg-[#181a1d]">
-            <div className="flex h-10 shrink-0 items-center gap-2 border-b border-[#292c30] px-3">
-              <Terminal size={15} className="text-[#9aa7b7]" />
-              <span className="text-xs font-medium uppercase tracking-wider text-[#b5bdc8]">
-                Terminal
-              </span>
-            </div>
-            <div className="m-3 flex flex-1">
-              <div className={placeholderClass}>
-                <div className="text-center">
-                  <Terminal size={26} className="mx-auto mb-2" />
-                  <p className="text-sm">Terminal Container</p>
-                  <p className="mt-1 text-xs">Member 4</p>
-                </div>
-              </div>
-            </div>
-          </section>
+          <TerminalPanel />
 
           {/* Screen sharing container — Member 5 */}
           <section className="mt-3 flex min-h-[220px] flex-col overflow-hidden rounded-lg border border-[#292c30] bg-[#181a1d]">
