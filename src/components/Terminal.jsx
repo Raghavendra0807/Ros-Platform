@@ -2,404 +2,331 @@
  * Terminal.jsx
  *
  * Milestone: Frontend UI Prototype (27 October 2026)
- * Assigned contributor: Terminal panel
+ * Assigned contributor: Terminal panel — Member 4
  *
  * Purpose:
  *   Renders the Terminal placeholder panel for the Scalable ROS Platform workspace.
- *   No shell commands are executed. No WebSocket or backend connection is made.
- *   The viewport reserves space for a real ttyd / xterm.js terminal in a future milestone.
+ *   UI-only — no shell execution, no WebSocket, no backend connection.
+ *   Styled after a Windows Terminal-inspired tab interface embedded in the browser.
  *
  * Integration note for the integrator (App.jsx owner):
- *   1. Add:  import TerminalPanel from './components/Terminal';
- *   2. Replace the inline "Terminal container — Member 4" <section> block with:
+ *   1. import TerminalPanel from './components/Terminal';
+ *   2. Replace the "Terminal container — Member 4" <section> block with:
  *      <TerminalPanel />
- *   The component is self-contained — it controls its own outer <section> wrapper,
- *   matching the dimensions and margin of the existing inline placeholder.
  */
 
-import { SquareTerminal, Minus, Square, Circle } from 'lucide-react';
+import { SquareTerminal, ChevronDown } from 'lucide-react';
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   Design tokens mirrored from App.jsx / the integrator's established palette.
-   These are self-contained CSS values — Tailwind CSS is NOT required.
+   Design tokens — mirrored from the integrator's established App.jsx palette.
+   Tailwind CSS is NOT required; all values are plain CSS strings.
 ───────────────────────────────────────────────────────────────────────────── */
-const TOKEN = {
-  /** Outer card / panel background */
-  cardBg:         '#181a1d',
-  /** Page / app background (slightly darker) */
-  appBg:          '#111315',
-  /** Terminal viewport background — deepest surface */
-  viewportBg:     '#0c0d10',
-  /** Outer panel border */
-  borderOuter:    '#292c30',
-  /** Inner / dashed element border */
-  borderInner:    '#34373c',
-  /** Primary foreground text */
-  textPrimary:    '#e5e7eb',
-  /** Secondary / label text */
-  textSecondary:  '#b5bdc8',
-  /** Muted / placeholder text */
-  textMuted:      '#858b95',
-  /** Icon tint */
-  iconTint:       '#9aa7b7',
-  /** Accent — restrained purple from index.css --accent */
-  accent:         '#c084fc',
-  /** Amber — offline / standalone status */
-  statusAmber:    '#f59e0b',
-  /** Monospace font stack */
-  mono:           "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Courier New', monospace",
+const T = {
+  cardBg:       '#181a1d',   /* outer panel surface                  */
+  viewportBg:   '#0e1013',   /* terminal viewport — deepest surface  */
+  tabBarBg:     '#131518',   /* tab-strip surface, slightly lighter  */
+  borderOuter:  '#292c30',   /* panel / header border                */
+  borderInner:  '#34373c',   /* inner dividers, badge outlines       */
+  textPrimary:  '#e5e7eb',   /* main terminal text                   */
+  textSec:      '#9aa7b7',   /* secondary labels, icon tint          */
+  textMuted:    '#858b95',   /* muted / dimmed lines                 */
+  accent:       '#c084fc',   /* cursor accent                        */
+  statusAmber:  '#f59e0b',   /* UI Preview dot                       */
+  promptGreen:  '#4ade80',   /* user@host green — standard bash      */
+  promptBlue:   '#60a5fa',   /* cwd blue                             */
+  mono: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Courier New', monospace",
 };
 
 /* ─────────────────────────────────────────────────────────────────────────────
-   Styles object — plain JS style objects consumed by React's style prop.
-   Matches the panel card pattern used in the integrator's App.jsx scaffold.
+   Style map — React inline style objects.
 ───────────────────────────────────────────────────────────────────────────── */
 const S = {
-  /** Outer section — matches the integrator's section wrapper dimensions */
+  /* ── Outer panel card ── */
   section: {
-    marginTop:      '12px',             /* mt-3 equivalent */
-    display:        'flex',
-    flexDirection:  'column',
-    overflow:       'hidden',
-    borderRadius:   '8px',
-    border:         `1px solid ${TOKEN.borderOuter}`,
-    backgroundColor: TOKEN.cardBg,
-    minHeight:      '240px',            /* slightly taller than integrator's 190px for readability */
-    flex:           '1 1 auto',
+    marginTop:       '12px',
+    display:         'flex',
+    flexDirection:   'column',
+    overflow:        'hidden',
+    borderRadius:    '8px',
+    border:          `1px solid ${T.borderOuter}`,
+    backgroundColor: T.cardBg,
+    minHeight:       '240px',
+    flex:            '1 1 auto',
   },
 
-  /** Header bar ─ 40px fixed height */
-  header: {
-    display:        'flex',
-    alignItems:     'center',
-    justifyContent: 'space-between',
-    height:         '40px',
-    flexShrink:     0,
-    borderBottom:   `1px solid ${TOKEN.borderOuter}`,
-    padding:        '0 12px',
-    gap:            '8px',
+  /* ── Outer panel header bar (40 px, matches other panels) ── */
+  outerHeader: {
+    display:         'flex',
+    alignItems:      'center',
+    justifyContent:  'space-between',
+    height:          '40px',
+    flexShrink:      0,
+    borderBottom:    `1px solid ${T.borderOuter}`,
+    padding:         '0 12px',
+    gap:             '8px',
   },
-
-  /** Left cluster inside the header */
-  headerLeft: {
-    display:   'flex',
+  outerHeaderLeft: {
+    display:    'flex',
     alignItems: 'center',
-    gap:        '8px',
+    gap:        '7px',
     overflow:   'hidden',
   },
-
-  /** Panel title text */
-  headerTitle: {
-    fontFamily:     TOKEN.mono,
-    fontSize:       '11px',
-    fontWeight:     600,
-    letterSpacing:  '0.08em',
-    textTransform:  'uppercase',
-    color:          TOKEN.textSecondary,
-    whiteSpace:     'nowrap',
+  outerHeaderTitle: {
+    fontFamily:    T.mono,
+    fontSize:      '11px',
+    fontWeight:    700,
+    letterSpacing: '0.09em',
+    textTransform: 'uppercase',
+    color:         T.textSec,
+    whiteSpace:    'nowrap',
   },
-
-  /** Shell badge pill */
-  shellBadge: {
-    display:        'inline-flex',
-    alignItems:     'center',
-    height:         '18px',
-    padding:        '0 7px',
-    borderRadius:   '4px',
-    border:         `1px solid ${TOKEN.borderInner}`,
-    backgroundColor: TOKEN.viewportBg,
-    fontFamily:     TOKEN.mono,
-    fontSize:       '10px',
-    color:          TOKEN.textMuted,
-    letterSpacing:  '0.04em',
-    whiteSpace:     'nowrap',
-  },
-
-  /** Right cluster: status + window chrome */
-  headerRight: {
-    display:   'flex',
+  outerHeaderRight: {
+    display:    'flex',
     alignItems: 'center',
-    gap:        '10px',
+    gap:        '8px',
     flexShrink: 0,
   },
 
-  /** Standalone / mock status badge */
-  statusBadge: {
-    display:        'inline-flex',
-    alignItems:     'center',
-    gap:            '5px',
-    height:         '20px',
-    padding:        '0 8px',
-    borderRadius:   '4px',
-    border:         `1px solid ${TOKEN.borderInner}`,
-    backgroundColor: TOKEN.viewportBg,
-    fontSize:       '10px',
-    color:          TOKEN.textMuted,
-    whiteSpace:     'nowrap',
-    letterSpacing:  '0.03em',
+  /* UI Preview badge */
+  uiBadge: {
+    display:         'inline-flex',
+    alignItems:      'center',
+    gap:             '5px',
+    height:          '20px',
+    padding:         '0 8px',
+    borderRadius:    '4px',
+    border:          `1px solid ${T.borderInner}`,
+    backgroundColor: T.viewportBg,
+    fontSize:        '10px',
+    color:           T.textMuted,
+    letterSpacing:   '0.03em',
+    whiteSpace:      'nowrap',
   },
-
-  /** Amber dot inside status badge */
-  statusDot: {
+  uiBadgeDot: {
     width:           '6px',
     height:          '6px',
     borderRadius:    '50%',
-    backgroundColor: TOKEN.statusAmber,
+    backgroundColor: T.statusAmber,
     flexShrink:      0,
   },
 
-  /** Faux window-chrome buttons (purely decorative) */
-  windowChrome: {
-    display:   'flex',
-    alignItems: 'center',
-    gap:        '4px',
-    opacity:    0.45,
-  },
-
-  /** Viewport wrapper — grows to fill remaining height */
+  /* ── Viewport wrapper ── */
   viewportWrapper: {
     display:       'flex',
     flexDirection: 'column',
     flex:          '1 1 auto',
-    padding:       '10px',
-    minHeight:     '0',             /* essential for flex shrinking */
+    padding:       '0 10px 10px',
+    minHeight:     '0',
   },
 
-  /** The dark CLI viewport itself */
+  /* ── Viewport card ── */
   viewport: {
-    display:        'flex',
-    flexDirection:  'column',
-    flex:           '1 1 auto',
-    borderRadius:   '6px',
-    border:         `1px solid ${TOKEN.borderInner}`,
-    backgroundColor: TOKEN.viewportBg,
-    overflow:       'hidden',
-    fontFamily:     TOKEN.mono,
-    fontSize:       '13px',
-    lineHeight:     '1.6',
-    minHeight:      '160px',
+    display:         'flex',
+    flexDirection:   'column',
+    flex:            '1 1 auto',
+    borderRadius:    '6px',
+    border:          `1px solid ${T.borderInner}`,
+    backgroundColor: T.viewportBg,
+    overflow:        'hidden',
+    fontFamily:      T.mono,
+    fontSize:        '13px',
+    lineHeight:      '1.65',
+    minHeight:       '170px',
   },
 
-  /** Top chrome line of the viewport (mimics terminal app title bar) */
-  viewportChrome: {
-    display:        'flex',
-    alignItems:     'center',
-    height:         '26px',
-    flexShrink:     0,
-    borderBottom:   `1px solid ${TOKEN.borderInner}`,
-    padding:        '0 10px',
-    gap:            '6px',
+  /* ── Windows Terminal-style tab strip ── */
+  tabStrip: {
+    display:         'flex',
+    alignItems:      'center',
+    justifyContent:  'space-between',
+    height:          '34px',
+    flexShrink:      0,
+    borderBottom:    `1px solid ${T.borderInner}`,
+    backgroundColor: T.tabBarBg,
+    padding:         '0 12px',
+  },
+  tabLeft: {
+    display:    'flex',
+    alignItems: 'center',
+    gap:        '6px',
+  },
+  tabLabel: {
+    fontSize:   '12px',
+    fontWeight: 600,
+    color:      T.textPrimary,
+    whiteSpace: 'nowrap',
+    letterSpacing: '0.01em',
+  },
+  tabChevron: {
+    color:      T.textMuted,
+    marginLeft: '1px',
+    flexShrink: 0,
+  },
+  tabRight: {
+    fontSize:      '11px',
+    color:         T.textMuted,
+    letterSpacing: '0.03em',
+    whiteSpace:    'nowrap',
+    userSelect:    'none',
   },
 
-  /** Traffic-light dots on the viewport chrome (decorative) */
-  trafficDot: (color) => ({
-    width:           '10px',
-    height:          '10px',
-    borderRadius:    '50%',
-    backgroundColor: color,
-    opacity:         0.6,
-  }),
-
-  /** Viewport chrome label */
-  viewportChromeLabel: {
-    position:  'absolute',
-    left:      '50%',
-    transform: 'translateX(-50%)',
-    fontSize:  '10px',
-    color:     TOKEN.textMuted,
-    letterSpacing: '0.04em',
-    userSelect: 'none',
-  },
-
-  /** Scrollable body of the viewport */
-  viewportBody: {
+  /* ── Viewport body ── */
+  body: {
     flex:       '1 1 auto',
     padding:    '14px 16px',
     overflowY:  'auto',
-    color:      TOKEN.textPrimary,
+    color:      T.textPrimary,
+    textAlign:  'left',            /* override #root { text-align: center } in index.css */
   },
 
-  /** Dim banner / system info lines */
-  bannerLine: {
-    color:        TOKEN.textMuted,
-    fontSize:     '12px',
-    marginBottom: '2px',
+  /* Dimmed context line — same size as body for monospace rhythm */
+  contextLine: {
+    fontSize:     '13px',
+    color:        T.textMuted,
+    marginBottom: '4px',
     userSelect:   'none',
   },
 
-  /** Separator line */
-  separator: {
-    borderTop:    `1px solid ${TOKEN.borderInner}`,
-    margin:       '10px 0',
-    opacity:      0.5,
+  /* Prototype notice — one step below context, above prompt */
+  noticeLine: {
+    fontSize:     '13px',
+    color:        T.textSec,
+    marginBottom: '16px',
   },
 
-  /** Milestone notice block */
-  notice: {
-    display:        'flex',
-    alignItems:     'flex-start',
-    gap:            '8px',
-    padding:        '8px 10px',
-    borderRadius:   '4px',
-    border:         `1px solid ${TOKEN.borderInner}`,
-    backgroundColor: 'rgba(240,159,50,0.06)',
-    margin:         '10px 0 14px',
-    fontSize:       '11px',
-    color:          '#c9a96e',
-    lineHeight:     '1.5',
-  },
-
-  /** [notice] icon column */
-  noticeIcon: {
-    flexShrink:     0,
-    marginTop:      '1px',
-    fontSize:       '13px',
-  },
-
-  /** The prompt line */
-  promptLine: {
+  /* Prompt row — flex, all tokens flush against each other */
+  promptRow: {
     display:    'flex',
     alignItems: 'center',
-    gap:        '0px',
-    marginTop:  '4px',
     flexWrap:   'wrap',
   },
-
-  /** prompt path segment */
-  promptPath: {
-    color:      '#6ca9f7',      /* blue — conventional shell cwd */
+  /* green: student@ros-workspace */
+  promptUser: {
+    color:      T.promptGreen,
     fontWeight: 600,
   },
-
-  /** prompt symbol */
-  promptSymbol: {
-    color:      TOKEN.textMuted,
-    margin:     '0 4px',
+  /* blue accent: :~ */
+  promptCwd: {
+    color:      T.promptBlue,
+    fontWeight: 600,
   },
-
-  /** Blinking block cursor */
+  /* neutral: $ with a single space before cursor */
+  promptSym: {
+    color:        T.textPrimary,
+    opacity:      0.75,
+    marginRight:  '4px',
+  },
   cursor: {
     display:         'inline-block',
     width:           '8px',
-    height:          '14px',
-    backgroundColor: TOKEN.accent,
+    height:          '15px',
+    backgroundColor: T.accent,
     verticalAlign:   'middle',
-    animation:       'ros-cursor-blink 1.1s step-end infinite',
+    animation:       'ros-terminal-blink 1.1s step-end infinite',
     borderRadius:    '1px',
-    marginLeft:      '2px',
   },
 };
 
-/* ─────────────────────────────────────────────────────────────────────────────
-   Cursor blink keyframes — injected once as a <style> tag.
-   Avoids any dependency on external CSS infrastructure.
-───────────────────────────────────────────────────────────────────────────── */
-const CURSOR_KEYFRAMES = `
-  @keyframes ros-cursor-blink {
+/* ── Cursor keyframe injected once ── */
+const BLINK_CSS = `
+  @keyframes ros-terminal-blink {
     0%, 100% { opacity: 1; }
     50%       { opacity: 0; }
   }
 `;
 
-function CursorStyle() {
-  return <style>{CURSOR_KEYFRAMES}</style>;
+function BlinkStyle() {
+  return <style>{BLINK_CSS}</style>;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
    Sub-components
 ───────────────────────────────────────────────────────────────────────────── */
 
-/** Header bar at the top of the panel card */
-function TerminalHeader() {
+/** Outer panel header — matches the card header pattern of all other panels */
+function OuterHeader() {
   return (
-    <div style={S.header}>
-      {/* ── Left: icon · title · shell badge ── */}
-      <div style={S.headerLeft}>
+    <div style={S.outerHeader}>
+      {/* Left: icon + TERMINAL label */}
+      <div style={S.outerHeaderLeft}>
         <SquareTerminal
           size={15}
-          style={{ color: TOKEN.iconTint, flexShrink: 0 }}
+          style={{ color: T.textSec, flexShrink: 0 }}
           aria-hidden="true"
         />
-        <span style={S.headerTitle}>Terminal</span>
-        <span style={S.shellBadge}>bash</span>
+        <span style={S.outerHeaderTitle}>Terminal</span>
       </div>
 
-      {/* ── Right: status · window chrome ── */}
-      <div style={S.headerRight}>
-        {/* Standalone / mock indicator */}
-        <span
-          style={S.statusBadge}
-          title="No backend connection — UI prototype only"
-        >
-          <span style={S.statusDot} />
-          Standalone · Mock
-        </span>
-
-        {/* Decorative window chrome — not functional */}
-        <span style={S.windowChrome} aria-hidden="true">
-          <Minus size={12} style={{ color: TOKEN.iconTint }} />
-          <Square size={11} style={{ color: TOKEN.iconTint }} />
-          <Circle size={11} style={{ color: TOKEN.iconTint }} />
+      {/* Right: UI Preview badge */}
+      <div style={S.outerHeaderRight}>
+        <span style={S.uiBadge} title="UI prototype — no backend connection">
+          <span style={S.uiBadgeDot} />
+          UI Preview
         </span>
       </div>
     </div>
   );
 }
 
-/** Dark CLI viewport with banner, notice, and mock prompt */
+/** Windows Terminal-style tab strip inside the dark viewport card */
+function TabStrip() {
+  return (
+    <div style={S.tabStrip}>
+      {/* Left: icon · Ubuntu Bash · chevron */}
+      <div style={S.tabLeft}>
+        <SquareTerminal
+          size={13}
+          style={{ color: T.textSec, flexShrink: 0 }}
+          aria-hidden="true"
+        />
+        <span style={S.tabLabel}>Ubuntu Bash</span>
+        <ChevronDown
+          size={12}
+          style={S.tabChevron}
+          aria-hidden="true"
+        />
+      </div>
+
+      {/* Right: shell type label */}
+      <span style={S.tabRight}>Linux Shell</span>
+    </div>
+  );
+}
+
+/** Scrollable terminal viewport body */
+function ViewportBody() {
+  return (
+    <div style={S.body}>
+      {/* Context label */}
+      <p style={S.contextLine}>ROS Development Workspace</p>
+
+      {/* Prototype notice — clearly marked as placeholder */}
+      <p style={S.noticeLine}>
+        Frontend prototype&nbsp;— terminal connection is not available yet.
+      </p>
+
+      {/* Static illustrative prompt — decorative only, no input or execution */}
+      <div style={S.promptRow} aria-label="Placeholder shell prompt">
+        {/* green  */ }<span style={S.promptUser}>student@ros-workspace</span>
+        {/* blue   */ }<span style={S.promptCwd}>:~</span>
+        {/* symbol */ }<span style={S.promptSym}>$</span>
+        {/* cursor — decorative blink, aria-hidden */}
+        <span style={S.cursor} aria-hidden="true" />
+      </div>
+    </div>
+  );
+}
+
+/** Dark terminal viewport card — tab strip + body */
 function TerminalViewport() {
   return (
-    <div style={S.viewport} role="region" aria-label="Terminal viewport placeholder">
-      {/* Viewport chrome — mimics a native terminal window title bar */}
-      <div style={{ ...S.viewportChrome, position: 'relative' }}>
-        <span style={S.trafficDot('#ff5f57')} />
-        <span style={S.trafficDot('#febc2e')} />
-        <span style={S.trafficDot('#28c840')} />
-        <span style={S.viewportChromeLabel}>
-          bash — student@ros-workspace
-        </span>
-      </div>
-
-      {/* Scrollable terminal body */}
-      <div style={S.viewportBody}>
-        {/* System / platform banner */}
-        <p style={S.bannerLine}>
-          Scalable ROS Platform — Interactive Web Terminal
-        </p>
-        <p style={S.bannerLine}>
-          Session type: browser-based (ttyd / xterm.js — future milestone)
-        </p>
-        <p style={S.bannerLine}>
-          ROS 2 Humble Hawksbill &nbsp;|&nbsp; Gazebo Fortress &nbsp;|&nbsp; Ubuntu 22.04 LTS
-        </p>
-
-        <div style={S.separator} />
-
-        {/* Milestone placeholder notice */}
-        <div style={S.notice} role="note">
-          <span style={S.noticeIcon}>⚠</span>
-          <span>
-            <strong>UI Prototype — 27 October 2026</strong>
-            <br />
-            This terminal panel is a visual placeholder. Shell command execution,
-            ROS 2 environment access and backend connections are not available at
-            this milestone stage. The viewport will be replaced by a live ttyd
-            session in a future integration sprint.
-          </span>
-        </div>
-
-        {/* Illustrative shell prompt — static, no input or execution */}
-        <div style={S.promptLine} aria-label="Placeholder shell prompt">
-          <span style={{ color: '#7dd3a8' }}>student</span>
-          <span style={{ color: TOKEN.textMuted }}>@</span>
-          <span style={{ color: '#7dd3a8' }}>ros-workspace</span>
-          <span style={{ color: TOKEN.textMuted }}>:</span>
-          <span style={S.promptPath}>~</span>
-          <span style={S.promptSymbol}>$&nbsp;</span>
-          {/* Blinking cursor — purely decorative */}
-          <span style={S.cursor} aria-hidden="true" />
-        </div>
-      </div>
+    <div
+      style={S.viewport}
+      role="region"
+      aria-label="Terminal viewport placeholder"
+    >
+      <TabStrip />
+      <ViewportBody />
     </div>
   );
 }
@@ -411,23 +338,19 @@ function TerminalViewport() {
 /**
  * TerminalPanel
  *
- * Self-contained terminal placeholder panel for the ROS workspace UI.
+ * Self-contained terminal placeholder for the ROS workspace UI.
+ * Styled after a Windows Terminal-inspired browser-embedded terminal.
  *
- * Usage (for the integrator replacing the inline block in App.jsx):
- *
+ * Usage (integrator):
  *   import TerminalPanel from './components/Terminal';
- *   …
  *   <TerminalPanel />
- *
- * The component owns its outer <section> wrapper, matching the dimensions
- * established by the integrator's scaffold in App.jsx.
  */
 function TerminalPanel() {
   return (
     <>
-      <CursorStyle />
+      <BlinkStyle />
       <section style={S.section} aria-label="Terminal panel">
-        <TerminalHeader />
+        <OuterHeader />
         <div style={S.viewportWrapper}>
           <TerminalViewport />
         </div>
